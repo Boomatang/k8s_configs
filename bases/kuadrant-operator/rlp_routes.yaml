@@ -1,0 +1,54 @@
+---
+apiVersion: kuadrant.io/v1beta2
+kind: RateLimitPolicy
+metadata:
+  name: toystore
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: toystore
+
+  limits:
+    toystore:
+      routeSelectors:
+        - hostnames:
+          - "*.toystore.com"
+          matches:
+            - path:
+                type: PathPrefix
+                value: "/toy"
+              method: GET
+      rates:
+        - limit: 5
+          duration: 10
+          unit: second
+      counters:
+        - request.url_path
+---
+apiVersion: kuadrant.io/v1beta2
+kind: RateLimitPolicy
+metadata:
+  name: dollstore
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: dollstore
+
+  limits:
+    toystore:
+      routeSelectors:
+        - hostnames:
+          - "*.toystore.com"
+          matches:
+            - path:
+                type: PathPrefix
+                value: "/doll"
+              method: GET
+      rates:
+        - limit: 1
+          duration: 5
+          unit: second
+      counters:
+        - request.url_path
