@@ -1,0 +1,210 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redisconfig
+stringData:
+  URL: redis://redis.default.svc.cluster.local/0
+type: Opaque
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+spec:
+  ports:
+  - port: 6379
+    protocol: TCP
+    targetPort: 6379
+  selector:
+    app: redis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: toystore
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 3000
+  selector:
+    app: toystore
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - image: redis:latest
+        name: redis
+        ports:
+        - containerPort: 6379
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: toystore
+  name: toystore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: toystore
+  template:
+    metadata:
+      labels:
+        app: toystore
+    spec:
+      containers:
+      - env:
+        - name: PORT
+          value: "3000"
+        image: quay.io/3scale/authorino:echo-api
+        name: toystore
+        ports:
+        - containerPort: 3000
+          name: http
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  labels:
+    app: dollstore
+  name: dollstore
+spec:
+  hostnames:
+  - '*.toystore.com'
+  parentRefs:
+  - name: istio-ingressgateway
+    namespace: istio-system
+  rules:
+  - backendRefs:
+    - name: toystore
+      port: 80
+    matches:
+    - method: GET
+      path:
+        type: PathPrefix
+        value: /doll
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  labels:
+    app: toystore
+  name: toystore
+spec:
+  hostnames:
+  - '*.toystore.com'
+  parentRefs:
+  - name: istio-ingressgateway
+    namespace: istio-system
+  rules:
+  - backendRefs:
+    - name: toystore
+      port: 80
+    matches:
+    - method: GET
+      path:
+        type: PathPrefix
+        value: /toy
+---
+apiVersion: kuadrant.io/v1beta1
+kind: Kuadrant
+metadata:
+  name: kuadrant-sample
+spec:
+  limitador:
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+        - podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: limitador
+            topologyKey: kubernetes.io/hostname
+          weight: 100
+        - podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: limitador
+            topologyKey: topology.kubernetes.io/zone
+          weight: 99
+    pdb:
+      maxUnavailable: 1
+    replicas: 3
+    resourceRequirements:
+      limits:
+        cpu: 200m
+        memory: 400Mi
+      requests:
+        cpu: 101m
+        memory: 201Mi
+    storage:
+      redis:
+        configSecretRef:
+          name: redisconfig
+---
+apiVersion: kuadrant.io/v1beta2
+kind: RateLimitPolicy
+metadata:
+  name: dollstore
+spec:
+  limits:
+    toystore:
+      counters:
+      - request.url_path
+      rates:
+      - duration: 5
+        limit: 1
+        unit: second
+      routeSelectors:
+      - hostnames:
+        - '*.toystore.com'
+        matches:
+        - method: GET
+          path:
+            type: PathPrefix
+            value: /doll
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: dollstore
+---
+apiVersion: kuadrant.io/v1beta2
+kind: RateLimitPolicy
+metadata:
+  name: toystore
+spec:
+  limits:
+    toystore:
+      counters:
+      - request.url_path
+      rates:
+      - duration: 10
+        limit: 5
+        unit: second
+      routeSelectors:
+      - hostnames:
+        - '*.toystore.com'
+        matches:
+        - method: GET
+          path:
+            type: Exact
+            value: /toy
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: toystore
