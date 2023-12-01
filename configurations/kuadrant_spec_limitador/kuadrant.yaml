@@ -1,0 +1,36 @@
+apiVersion: kuadrant.io/v1beta1
+kind: Kuadrant
+metadata:
+  name: kuadrant-sample
+spec:
+  limitador:
+    replicas: 3
+    storage:
+      redis:
+        configSecretRef:
+          name: redisconfig
+    pdb:
+      maxUnavailable: 1  
+    resourceRequirements:
+      limits:
+        cpu: 200m
+        memory: 400Mi
+      requests:
+        cpu: 101m
+        memory: 201Mi    
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: limitador
+              topologyKey: kubernetes.io/hostname
+          - weight: 99
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: limitador
+              topologyKey: topology.kubernetes.io/zone  
+   

@@ -1,0 +1,12 @@
+apiVersion: kuadrant.io/v1beta1
+kind: Kuadrant
+metadata:
+  name: kuadrant-sample
+spec:
+  authorino:
+    replicas: 3
+    evaluatorCacheSize: 100
+    tracing:
+      endpoint: http://simplest-collector-headless.observability.svc.cluster.local:14268/api/traces
+    metrics:
+      deep: true

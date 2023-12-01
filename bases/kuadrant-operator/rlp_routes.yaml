@@ -16,7 +16,7 @@ spec:
           - "*.toystore.com"
           matches:
             - path:
-                type: PathPrefix
+                type: Exact
                 value: "/toy"
               method: GET
       rates:
