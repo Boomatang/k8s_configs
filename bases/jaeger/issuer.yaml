@@ -1,0 +1,9 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  labels:
+    app: jaeger
+  name: jaeger-ca
+spec:
+  selfSigned: {}
+

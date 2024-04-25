@@ -7,3 +7,20 @@ resources:
   - ../../bases/jaeger
 patches:
   - kuadrant.yaml
+
+generatorOptions:
+    disableNameSuffixHash: true
+
+secretGenerator:
+  - name: jaeger-tls-secret
+    literals:
+      - tls.crt=$(kubectl get secret jaeger-simplest-server-cert -n observability -o jsonpath='{.data.tls\.crt}' | base64 -d)
+
+configMapGenerator:
+  - name: tracing-service-cert
+    literals:
+      - tracing-service.crt=$(kubectl get secret jaeger-simplest-server-cert -n observability -o jsonpath='{.data.tls\.crt}' | base64 -d)
+    #envs:
+      #- tracing-service.crt=secret/jaeger-tls-secret/tls.crt
+      #- tracing-service.crt=$(kubectl get secret jaeger-simplest-server-cert -n observability -o jsonpath='{.data.tls\.crt}' | base64 -d)
+      #- .env

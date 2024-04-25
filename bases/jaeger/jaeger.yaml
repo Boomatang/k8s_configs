@@ -3,3 +3,21 @@ kind: Jaeger
 metadata:
   name: simplest
   namespace: observability
+spec:
+  allInOne:
+    options:
+      collector:
+        otlp:
+          grpc:
+            tls:
+              enabled: true
+              cert: /etc/tls/server/tls.crt
+              key: /etc/tls/server/tls.key
+  volumeMounts:
+  - name: certificates
+    mountPath: /etc/tls/server
+    readOnly: true
+  volumes:
+  - name: certificates
+    secret:
+      secretName: jaeger-simplest-server-cert

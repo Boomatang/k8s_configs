@@ -4,4 +4,6 @@ resources:
   - namespace.yaml
   - remote.yaml
   - jaeger.yaml
+  - certificate.yaml
+  - issuer.yaml
 

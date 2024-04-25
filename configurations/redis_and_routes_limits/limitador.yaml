@@ -7,4 +7,3 @@ spec:
     redis:
       configSecretRef:
         name: redisconfig
-        namespace: default
